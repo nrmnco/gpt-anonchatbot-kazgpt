@@ -1,97 +1,58 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command, or_f
+from aiogram.fsm.context import FSMContext
 
-from motor.core import AgnosticDatabase as MDB
-
-from keyboards import reply_builder, main_kb
+from bot import dp
+from states import MainState
+from keyboards.reply import main_kb, search_kb, chatting_kb
+from database.requests import add_session, get_random_record, add_to_queue, get_interlocutor_id, delete_session, get_bio
 
 router = Router()
 
 
 @router.message(or_f(Command("search"), F.text == "☕ Искать собеседника"))
-async def search_interlocutor(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
-    pattern = {
-        "text": (
-            "<b>☕ У тебя уже есть активный чат</b>\n"
-            "<i>Используй команду /leave, чтобы покинуть чат</i>"
-        ),
-        "reply_markup": reply_builder("🚫 Прекратить диалог")
-    }
+async def search_interlocutor(message: Message, state: FSMContext) -> None:
+    await state.set_state(MainState.searching)
 
-    if user["status"] == 0:
-        interlocutor = await db.users.find_one({"status": 1})
-        await db.users.update_one({"_id": user["_id"]}, {"$set": {"status": 1}})
+    await message.answer("Ищем собеседника", reply_markup=search_kb)
+    await add_to_queue(message.from_user.id)
+    interlocutor = await get_random_record(message.from_user.id)
+    if interlocutor:
+        interlocutor_bio = await get_bio(interlocutor.user_tg_id)
+        user_bio = await get_bio(message.from_user.id)
+        await add_session(message.from_user.id, interlocutor.user_tg_id)
+        await message.answer(f"Собеседник найден\nЕго био: {interlocutor_bio}", reply_markup=chatting_kb)
+        await message.bot.send_message(chat_id=interlocutor.user_tg_id, text=f"Собеседник найден\nЕго био: {user_bio}", reply_markup=chatting_kb)
+        await state.set_state(MainState.chatting)
+        await dp.fsm.get_context(message.bot, user_id=interlocutor.user_tg_id, chat_id=interlocutor.user_tg_id).set_state(MainState.chatting)
+        
 
-        if not interlocutor:
-            pattern["text"] = (
-                "<b>👀 Ищу тебе собеседника...</b>\n"
-                "<i>/cancel - Отменить поиск собеседника</i>"
-            )
-            pattern["reply_markup"] = reply_builder("❌ Отменить поиск")
-        else:
-            pattern["text"] = (
-                "<b>🎁 Я нашел тебе собеседника, приятного общения!</b>\n"
-                "<i>/next - Следующий собеседник</i>\n"
-                "<i>/leave - Прекратить диалог</i>"
-            )
-            pattern["reply_markup"] = reply_builder("🚫 Прекратить диалог")
-            
-            await db.users.update_one(
-                {"_id": user["_id"]}, {"$set": {"status": 2, "interlocutor": interlocutor["_id"]}}
-            )
-            await db.users.update_one(
-                {"_id": interlocutor["_id"]}, {"$set": {"status": 2, "interlocutor": user["_id"]}}
-            )
-            await message.bot.send_message(interlocutor["_id"], **pattern)
-    elif user["status"] == 1:
-        pattern["text"] = (
-            "<b>👀 УЖЕ ИЩУ тебе собеседника...</b>\n"
-            "<i>/cancel - Отменить поиск собеседника</i>"
-        )
-        pattern["reply_markup"] = reply_builder("❌ Отменить поиск")
+@router.message(MainState.searching)
+async def search_error(message: Message):
+    await message.answer("Вы уже находитесь в поиске собеседника", reply_markup=search_kb)
 
-    await message.reply(**pattern)
+@router.message(Command("stop_chatting"), MainState.chatting)
+async def stop_chatting(message: Message):
+    interlocutor = await get_interlocutor_id(message.from_user.id)
+    await message.answer(text="Диалог закончен", reply_markup=main_kb)
+    await message.bot.send_message(chat_id=interlocutor, text="Диалог закончен", reply_markup=main_kb)
+    await delete_session(message.from_user.id)
+    await dp.fsm.get_context(message.bot, user_id=interlocutor, chat_id=interlocutor).clear()
+    await dp.fsm.get_context(message.bot, user_id=message.from_user.id, chat_id=message.from_user.id).clear()
 
+@dp.message(MainState.chatting, Command("next"))
+async def next_chatting(message: Message, state: FSMContext):
+    await stop_chatting(message)
 
-@router.message(or_f(Command("cancel"), F.text == "❌ Отменить поиск"))
-async def cancel_search(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
-    if user["status"] == 1:
-        await db.users.update_one({"_id": user["_id"]}, {"$set": {"status": 0}})
-        await message.reply(
-            "<b>😔 Все.. больше никого искать не буду!</b>", reply_markup=main_kb
-        )
-
-
-@router.message(or_f(Command(commands=["leave", "stop"]), F.text == "🚫 Прекратить диалог"))
-async def leave(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
-    if user["status"] == 2:
-        await message.reply("<b>💬 Ты покинул чат!</b>", reply_markup=main_kb)
-        await message.bot.send_message(
-            user["interlocutor"], "<b>💬 Собеседник покинул чат!</b>", reply_markup=main_kb
-        )
-
-        await db.users.update_many(
-            {"_id": {"$in": [user["_id"], user["interlocutor"]]}},
-            {"$set": {"status": 0, "interlocutor": ""}}
-        )
-
-        # TODO: Реализовать автопоиск
-
-
-@router.message(Command("next"))
-async def next_interlocutor(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
-    if user["status"] == 2:
-        await message.bot.send_message(
-            user["interlocutor"], "<b>💬 Собеседник покинул чат!</b>", reply_markup=main_kb
-        )
-        await db.users.update_many(
-            {"_id": {"$in": [user["_id"], user["interlocutor"]]}},
-            {"$set": {"status": 0, "interlocutor": ""}}
-        )
-
-    await search_interlocutor(message, db)
+    await state.set_state(MainState.searching)
+    await message.answer("Ищем собеседника", reply_markup=search_kb)
+    await add_to_queue(message.from_user.id)
+    interlocutor = await get_random_record(message.from_user.id)
+    if interlocutor:
+        await add_session(message.from_user.id, interlocutor.user_tg_id)
+        await message.answer("Собеседник найден", reply_markup=chatting_kb)
+        await message.bot.send_message(chat_id=interlocutor.user_tg_id, text="Собеседник найден", reply_markup=chatting_kb)
+        await state.set_state(MainState.chatting)
+        await dp.fsm.get_context(message.bot, user_id=interlocutor.user_tg_id, chat_id=interlocutor.user_tg_id).set_state(MainState.chatting)
+        

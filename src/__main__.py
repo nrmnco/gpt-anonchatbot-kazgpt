@@ -1,34 +1,29 @@
 import asyncio
 
-from aiogram import Bot, Dispatcher
-from aiogram.enums import ParseMode
-
-from motor.motor_asyncio import AsyncIOMotorClient
+import logging
 
 from handlers import setup_message_routers
 from callbacks import setup_callbacks_routers
 
-from middlewares import CheckUser
+from database.models import async_main
 
-from config_reader import config
-
+from bot import dp, bot
 
 async def main() -> None:
-    bot = Bot(config.BOT_TOKEN.get_secret_value(), parse_mode=ParseMode.HTML)
-    dp = Dispatcher()
-
-    cluster = AsyncIOMotorClient(config.DATABASE_URL.get_secret_value())
-    db = cluster.anonimdb
-
-    dp.message.middleware(CheckUser())
+    
+    await async_main()
 
     message_routers = setup_message_routers()
     callback_routers = setup_callbacks_routers()
     dp.include_router(message_routers)
     dp.include_router(callback_routers)
 
-    await dp.start_polling(bot, db=db)
-
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    # try:
+    #     asyncio.run(main())
+    # except:
+    #     print("exit")
     asyncio.run(main())

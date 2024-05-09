@@ -1,29 +1,20 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
+from aiogram.fsm.context import FSMContext
 
-from motor.core import AgnosticDatabase as MDB
-
-from keyboards import inline_builder
-from utils import ProfileSettings
+from states import MainState
+from keyboards.reply import main_kb
 
 router = Router()
 
+@router.callback_query(F.data == "change_bio", MainState.profile)
+async def change_bio_cb(cb: CallbackQuery, state:FSMContext):
+    await cb.answer('')
+    await state.set_state(MainState.change_bio)
+    await cb.message.answer("Напишите новое био")
 
-@router.callback_query(ProfileSettings.filter(F.action == "change"))
-async def change_profile_settings(query: CallbackQuery, callback_data: ProfileSettings, db: MDB) -> None:
-    user = await db.users.find_one({"_id": query.from_user.id})
+@router.callback_query(F.data == "go_back", MainState.profile)
+async def go_back(cb: CallbackQuery, state:FSMContext):
+    await state.clear()
+    await cb.message.answer("Начинай общение командой /search или нажав на кнопку '☕ Искать собеседника' ниже", reply_markup=main_kb)
 
-    if callback_data.value == "auto_search_toggle":
-        if user["auto_search"]:
-            await db.users.update_one({"_id": user["_id"]}, {"$set": {"auto_search": False}})
-            option = "🔴"
-        else:
-            await db.users.update_one({"_id": user["_id"]}, {"$set": {"auto_search": True}})
-            option = "🟢"
-
-        await query.message.edit_reply_markup(
-            reply_markup=inline_builder(
-                f"{option} Авто-поиск", ProfileSettings(value="auto_search_toggle").pack()
-            )
-        )
-    await query.answer()

@@ -1,21 +1,25 @@
 from aiogram import Router, F
 from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
 
-from motor.core import AgnosticDatabase as MDB
+from states import MainState
+from database.requests import get_interlocutor_id
+
 
 router = Router()
 
 
 @router.edited_message()
-async def editing_messages(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
-    if user["status"] == 2:
+async def editing_messages(message: Message) -> None:
+    interlocutor = get_interlocutor_id(message.from_user.id)
+    
+    if interlocutor:
         if message.text:
-            await message.bot.edit_message_text(message.text, user["interlocutor"], message.message_id + 1)
+            await message.bot.edit_message_text(message.text, interlocutor, message.message_id + 1)
         elif message.caption:
             await message.bot.edit_message_caption(
                 message.caption,
-                user["interlocutor"],
+                interlocutor,
                 message.message_id + 1,
                 caption_entities=message.caption_entities,
                 parse_mode=None
@@ -29,12 +33,12 @@ async def editing_messages(message: Message, db: MDB) -> None:
             "sticker", "document", "photo",
             "video"
         ]
-    )
+    ), MainState.chatting
 )
-async def echo(message: Message, db: MDB) -> None:
-    user = await db.users.find_one({"_id": message.from_user.id})
+async def echo(message: Message, state:FSMContext) -> None:
+    interlocutor = await get_interlocutor_id(message.from_user.id)
     
-    if user["status"] == 2:
+    if interlocutor:
         if message.content_type == "text":
             reply = None
             if message.reply_to_message:
@@ -44,7 +48,7 @@ async def echo(message: Message, db: MDB) -> None:
                     reply = message.reply_to_message.message_id - 1
 
             await message.bot.send_message(
-                user["interlocutor"],
+                interlocutor,
                 message.text,
                 entities=message.entities,
                 reply_to_message_id=reply,
@@ -52,16 +56,15 @@ async def echo(message: Message, db: MDB) -> None:
             )
         if message.content_type == "photo":
             await message.bot.send_photo(
-                user["interlocutor"],
+                interlocutor,
                 message.photo[-1].file_id,
                 caption=message.caption,
                 caption_entities=message.caption_entities,
                 parse_mode=None,
-                has_spoiler=True
             )
         if message.content_type == "audio":
             await message.bot.send_audio(
-                user["interlocutor"],
+                interlocutor,
                 message.audio.file_id,
                 caption=message.caption,
                 caption_entities=message.caption_entities,
@@ -69,7 +72,7 @@ async def echo(message: Message, db: MDB) -> None:
             )
         if message.content_type == "voice":
             await message.bot.send_voice(
-                user["interlocutor"],
+                interlocutor,
                 message.voice.file_id,
                 caption=message.caption,
                 caption_entities=message.caption_entities,
@@ -77,7 +80,7 @@ async def echo(message: Message, db: MDB) -> None:
             )
         if message.content_type == "document":
             await message.bot.send_document(
-                user["interlocutor"],
+                interlocutor,
                 message.document.file_id,
                 caption=message.caption,
                 caption_entities=message.caption_entities,
@@ -85,15 +88,14 @@ async def echo(message: Message, db: MDB) -> None:
             )
         if message.content_type == "sticker":
             await message.bot.send_sticker(
-                user["interlocutor"],
+                interlocutor,
                 message.sticker.file_id
             )
         if message.content_type == "video":
             await message.bot.send_video(
-                user["interlocutor"],
+                interlocutor,
                 message.video.file_id,
                 caption=message.caption,
                 caption_entities=message.caption_entities,
                 parse_mode=None,
-                has_spoiler=True
             )
