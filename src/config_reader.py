@@ -8,6 +8,7 @@ ENV_FILE_DIR = os.path.abspath(".")
 class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     SQLALCHEMY_URL: SecretStr
+    OPENAI_API_KEY: SecretStr
 
     model_config = SettingsConfigDict(
         env_file=f"{ENV_FILE_DIR}/.env",

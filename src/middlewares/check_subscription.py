@@ -14,20 +14,13 @@ class CheckSubscription(BaseMiddleware):
         event: Message,
         data: dict[str, Any]
     ) -> Any:
-        print('middleware1')
-        print(event.from_user.username)
-        print(event.from_user.id)
         statuses = ["creator", "administrator", "member"]
         try:
-            result = await bot.get_chat_member(chat_id="@awdswrr", user_id=event.from_user.id)
-            print(result.status.value)
+            result = await bot.get_chat_member(chat_id="@nukazgpt", user_id=event.from_user.id)
             if result.status.value in statuses:
                 return await handler(event, data)
         except:
             await event.answer("Подпишись на @nukazgpt")
-            print('middleware2')
             return
-        
         await event.answer("Подпишись на @nukazgpt")
-        print('middleware2')
         

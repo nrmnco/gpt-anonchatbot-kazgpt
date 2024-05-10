@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_
 from config_reader import config
 
 engine = create_async_engine(config.SQLALCHEMY_URL.get_secret_value())
+# engine = create_async_engine("postgresql+asyncpg://postgres:1234@localhost/gpt-anonbot")
 async_session = async_sessionmaker(engine)
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -15,6 +16,7 @@ class User(Base):
     
     user_tg_id = mapped_column(BigInteger, primary_key=True)
     bio: Mapped[str] = mapped_column()
+    credits: Mapped[int] = mapped_column()
 
 class ChatSession(Base):
     __tablename__ = "chatsessions"
@@ -22,8 +24,6 @@ class ChatSession(Base):
     session_id: Mapped[int] = mapped_column(primary_key=True)
     user_tg_id_1 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
     user_tg_id_2 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
-    # user_tg_id_1 = mapped_column(BigInteger)
-    # user_tg_id_2 = mapped_column(BigInteger)
 
 class Queue(Base):
     __tablename__ = "queue"

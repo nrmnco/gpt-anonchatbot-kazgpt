@@ -15,6 +15,7 @@ async def change_bio_cb(cb: CallbackQuery, state:FSMContext):
 
 @router.callback_query(F.data == "go_back", MainState.profile)
 async def go_back(cb: CallbackQuery, state:FSMContext):
+    await cb.answer('')
     await state.clear()
     await cb.message.answer("Начинай общение командой /search или нажав на кнопку '☕ Искать собеседника' ниже", reply_markup=main_kb)
 

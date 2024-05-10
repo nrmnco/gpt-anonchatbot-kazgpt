@@ -9,9 +9,9 @@ from database.requests import get_interlocutor_id
 router = Router()
 
 
-@router.edited_message()
+@router.edited_message(F.chat.type.in_({"private"}))
 async def editing_messages(message: Message) -> None:
-    interlocutor = get_interlocutor_id(message.from_user.id)
+    interlocutor = await get_interlocutor_id(message.from_user.id)
     
     if interlocutor:
         if message.text:
@@ -33,7 +33,7 @@ async def editing_messages(message: Message) -> None:
             "sticker", "document", "photo",
             "video"
         ]
-    ), MainState.chatting
+    ), MainState.chatting, F.chat.type.in_({"private"})
 )
 async def echo(message: Message, state:FSMContext) -> None:
     interlocutor = await get_interlocutor_id(message.from_user.id)

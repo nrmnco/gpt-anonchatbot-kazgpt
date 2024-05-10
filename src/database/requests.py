@@ -4,7 +4,7 @@ from sqlalchemy import func, select, update, delete, or_
 
 async def set_user(tg_id, bio) -> None:
     async with async_session() as session:
-        session.add(User(user_tg_id = tg_id, bio = bio))
+        session.add(User(user_tg_id = tg_id, bio = bio, credits = 0))
         await session.commit()
 
 async def get_bio(tg_id):
@@ -42,6 +42,13 @@ async def get_interlocutor_id(tg_id):
             return user.user_tg_id_1
 
         return None
+async def is_in_session(tg_id):
+    async with async_session() as session:
+        user = await session.scalar(select(ChatSession).where(or_(ChatSession.user_tg_id_1 == tg_id, ChatSession.user_tg_id_2 == tg_id)))
+        if user:
+            return True
+        return False
+        
     
 async def delete_session(tg_id):
     async with async_session() as session:

@@ -6,27 +6,30 @@ from aiogram.fsm.context import FSMContext
 from bot import dp
 from states import MainState
 from keyboards.reply import main_kb, search_kb, chatting_kb
-from database.requests import add_session, get_random_record, add_to_queue, get_interlocutor_id, delete_session, get_bio
+from database.requests import add_session, get_random_record, add_to_queue, get_interlocutor_id, delete_session, get_bio, is_in_session
 
 router = Router()
 
 
 @router.message(or_f(Command("search"), F.text == "☕ Искать собеседника"))
 async def search_interlocutor(message: Message, state: FSMContext) -> None:
-    await state.set_state(MainState.searching)
+    if await is_in_session(message.from_user.id):
+        await message.answer("У тебя уже есть собеседник!!")
+    else:
+        await state.set_state(MainState.searching)
 
-    await message.answer("Ищем собеседника", reply_markup=search_kb)
-    await add_to_queue(message.from_user.id)
-    interlocutor = await get_random_record(message.from_user.id)
-    if interlocutor:
-        interlocutor_bio = await get_bio(interlocutor.user_tg_id)
-        user_bio = await get_bio(message.from_user.id)
-        await add_session(message.from_user.id, interlocutor.user_tg_id)
-        await message.answer(f"Собеседник найден\nЕго био: {interlocutor_bio}", reply_markup=chatting_kb)
-        await message.bot.send_message(chat_id=interlocutor.user_tg_id, text=f"Собеседник найден\nЕго био: {user_bio}", reply_markup=chatting_kb)
-        await state.set_state(MainState.chatting)
-        await dp.fsm.get_context(message.bot, user_id=interlocutor.user_tg_id, chat_id=interlocutor.user_tg_id).set_state(MainState.chatting)
-        
+        await message.answer("Ищем собеседника", reply_markup=search_kb)
+        await add_to_queue(message.from_user.id)
+        interlocutor = await get_random_record(message.from_user.id)
+        if interlocutor:
+            interlocutor_bio = await get_bio(interlocutor.user_tg_id)
+            user_bio = await get_bio(message.from_user.id)
+            await add_session(message.from_user.id, interlocutor.user_tg_id)
+            await message.answer(f"Собеседник найден\nЕго био: {interlocutor_bio}", reply_markup=chatting_kb)
+            await message.bot.send_message(chat_id=interlocutor.user_tg_id, text=f"Собеседник найден\nЕго био: {user_bio}", reply_markup=chatting_kb)
+            await state.set_state(MainState.chatting)
+            await dp.fsm.get_context(message.bot, user_id=interlocutor.user_tg_id, chat_id=interlocutor.user_tg_id).set_state(MainState.chatting)
+            
 
 @router.message(MainState.searching)
 async def search_error(message: Message):
