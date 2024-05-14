@@ -3,9 +3,9 @@ from aiogram.types import Message
 from aiogram.filters import Command, or_f
 from aiogram.fsm.context import FSMContext
 
-from states import MainState
-from keyboards.reply import profile_kb, main_kb
-from database.requests import get_bio, update_bio
+from src.states import MainState
+from src.keyboards.reply import profile_kb, main_kb
+from src.database.requests import get_bio, update_bio
 
 router = Router()
 
@@ -19,5 +19,5 @@ async def profile(message: Message, state: FSMContext) -> None:
 async def change_bio(message: Message, state: FSMContext) -> None:
     await update_bio(message.from_user.id, message.text)
     await state.clear()
-    await message.answer("Био изменен\nНачинай общение командой /search или нажав на кнопку '☕ Искать собеседника' ниже", reply_markup=main_kb)
+    await message.answer("Био изменен\nНачинай общение командой /next в меню слева  или нажав на кнопку '☕ Искать собеседника' ниже", reply_markup=main_kb)
 

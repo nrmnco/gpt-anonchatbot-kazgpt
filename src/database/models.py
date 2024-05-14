@@ -1,11 +1,10 @@
-from sqlalchemy import BigInteger, ForeignKey
+from sqlalchemy import BigInteger, ForeignKey, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
-from config_reader import config
+from src.config_reader import config
 
 engine = create_async_engine(config.SQLALCHEMY_URL.get_secret_value())
-# engine = create_async_engine("postgresql+asyncpg://postgres:1234@localhost/gpt-anonbot")
 async_session = async_sessionmaker(engine)
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -29,6 +28,12 @@ class Queue(Base):
     __tablename__ = "queue"
 
     user_tg_id = mapped_column(BigInteger, primary_key=True)
+
+class Friend(Base):
+    __tablename__ = "friends"
+
+    user_tg_id = mapped_column(BigInteger, primary_key=True)
+    friends = mapped_column(JSON)
 
 
 async def async_main():

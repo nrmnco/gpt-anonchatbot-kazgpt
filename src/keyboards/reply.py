@@ -9,6 +9,9 @@ main_kb = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text="🍪 Профиль")
+        ],
+        [
+            KeyboardButton(text="👩🏿‍🤝‍👩🏿 Написать другу")
         ]
     ],
     resize_keyboard=True
@@ -17,7 +20,7 @@ main_kb = ReplyKeyboardMarkup(
 reg_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Зарегистрироваться")
+            KeyboardButton(text="✔️ Написать Био")
         ]
     ],
     resize_keyboard=True
@@ -26,7 +29,7 @@ reg_kb = ReplyKeyboardMarkup(
 search_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [
-            InlineKeyboardButton(text="Остановить поиск", callback_data="search_stop")
+            InlineKeyboardButton(text="✋ Остановить поиск", callback_data="search_stop")
         ],
     ],
 )
@@ -34,22 +37,48 @@ search_kb = InlineKeyboardMarkup(
 profile_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [
-            InlineKeyboardButton(text="Изменить био", callback_data="change_bio")
+            InlineKeyboardButton(text="👤 Изменить био", callback_data="change_bio")
         ],
         [
-            InlineKeyboardButton(text="На главное меню", callback_data="go_back")
+            InlineKeyboardButton(text="⬅️ На главное меню", callback_data="go_back")
         ],
-    ],
+    ]
 )
 
 chatting_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="/stop_chatting",)
+            KeyboardButton(text="❌ Закончить Диалог",)
         ],
         [
-            KeyboardButton(text="/next")
+            KeyboardButton(text="🔎 Поиск нового собеседника")
+        ],
+        [
+            KeyboardButton(text="🤝 Добавить в друзья")
         ]
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
+    one_time_keyboard=True,
+)
+
+add_friend_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✔️️ Принять", callback_data="accept")
+        ],
+        [
+            InlineKeyboardButton(text="❌ Отклонить", callback_data="decline")
+        ],
+    ],
+)
+
+permission_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✔️️ Принять", callback_data="perm_accept")
+        ],
+        [
+            InlineKeyboardButton(text="❌ Отклонить", callback_data="perm_decline")
+        ],
+    ],
 )
