@@ -16,11 +16,12 @@ async def main() -> None:
     await async_main()
     bot_commands = [
         BotCommand(command="/start", description="Start"),
-        BotCommand(command="/stop_chatting", description="blablalbas"),
-        BotCommand(command="/next", description="blablalba"),
-        BotCommand(command="/profile", description="blablalba"),
-        BotCommand(command="/add_friend", description="blablalba"),
-        BotCommand(command="/write_to_friend", description="blablalba")
+        BotCommand(command="/stop_chatting", description="stop_chatting"),
+        BotCommand(command="/next", description="next"),
+        BotCommand(command="/profile", description="profile"),
+        BotCommand(command="/add_friend", description="add_friend"),
+        BotCommand(command="/write_to_friend", description="write_to_friend"),
+        BotCommand(command="/users_online", description="users_online")
     ]
     await bot.set_my_commands(bot_commands)
 

@@ -3,7 +3,7 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
 from src.states import MainState
-from src.database.requests import get_interlocutor_id
+from src.database.requests import get_interlocutor_id, get_people_online
 
 
 router = Router()

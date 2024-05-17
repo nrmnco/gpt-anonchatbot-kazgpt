@@ -5,7 +5,8 @@ from aiogram.fsm.context import FSMContext
 
 from src import dp
 from src.keyboards.reply import main_kb, search_kb
-from src.database.requests import add_session, get_random_record, add_to_queue, get_interlocutor_id, delete_session, get_bio, is_in_session
+from src.database.requests import add_session, get_random_record, add_to_queue, get_interlocutor_id, delete_session, \
+    get_bio, is_in_session, get_people_online
 
 router = Router()
 
@@ -15,7 +16,8 @@ async def search_interlocutor(message: Message, state: FSMContext) -> None:
     if await is_in_session(message.from_user.id):
         await message.answer("У тебя уже есть собеседник!!")
     else:
-        await message.answer("Ищем собеседника . . .", reply_markup=search_kb)
+        users_num = await get_people_online()
+        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я)", reply_markup=search_kb)
         await add_to_queue(message.from_user.id)
         interlocutor = await get_random_record(message.from_user.id)
         if interlocutor:
@@ -46,7 +48,8 @@ async def next_chatting(message: Message, state: FSMContext):
     if await is_in_session(message.from_user.id):
         await message.answer("У тебя уже есть собеседник!!")
     else:
-        await message.answer("Ищем собеседника . . .", reply_markup=search_kb)
+        users_num = await get_people_online()
+        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я)", reply_markup=search_kb)
         await add_to_queue(message.from_user.id)
         interlocutor = await get_random_record(message.from_user.id)
         if interlocutor:
@@ -58,6 +61,10 @@ async def next_chatting(message: Message, state: FSMContext):
             await state.clear()
             await dp.fsm.get_context(message.bot, user_id=interlocutor.user_tg_id, chat_id=interlocutor.user_tg_id).set_state(await state.clear())
 
+@router.message(Command("users_online"))
+async def write_users_online(message: Message):
+    users_num = await get_people_online()
+    await message.answer(f"На данный момент онлайн находятся {users_num} пользователей(я)")
 
 
 

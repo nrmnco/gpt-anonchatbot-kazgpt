@@ -108,3 +108,21 @@ async def add_friend(tg_id, interlocutor_tg_id, nickname):
             friends = {interlocutor_tg_id: nickname}
             session.add(Friend(user_tg_id=tg_id, friends=friends))
             await session.commit()
+
+async def get_people_online():
+    async with async_session() as session:
+        total_counter = 0
+
+        queue_counter = await session.execute(
+            select(func.count()).select_from(Queue)
+        )
+        session_counter = await session.execute(
+            select(func.count()).select_from(ChatSession)
+        )
+
+        total_counter += queue_counter.scalar()
+        total_counter += 2*session_counter.scalar()
+
+        print(total_counter)
+
+        return total_counter
