@@ -1,5 +1,10 @@
+from datetime import datetime, timedelta, timezone
+
 from src.database.models import async_session
-from src.database.models import User, ChatSession, Queue, Friend
+from src.database.models import User, ChatSession, ChatSessionLog, Queue, Friend
+
+from time import sleep, time
+
 from sqlalchemy import func, select, update, delete, or_
 
 async def set_user(tg_id, bio) -> None:
@@ -30,6 +35,22 @@ async def check_user(tg_id) -> bool:
 async def add_session(tg_id_1, tg_id_2) -> None:
     async with async_session() as session:
         session.add(ChatSession(user_tg_id_1 = tg_id_1, user_tg_id_2 = tg_id_2))
+
+        ch = await session.scalar(
+            select(ChatSessionLog).where(
+                or_(ChatSessionLog.user_tg_id_1 == tg_id_2 and ChatSessionLog.user_tg_id_2 == tg_id_1,
+                    ChatSessionLog.user_tg_id_2 == tg_id_2 and ChatSessionLog.user_tg_id_1 == tg_id_1))
+        )
+
+        if not ch:
+            session.add(ChatSessionLog(user_tg_id_1 = tg_id_1, user_tg_id_2 = tg_id_2,date_and_time=datetime.now(timezone.utc) - timedelta(hours=24)))
+        else:
+            await session.execute(
+                update(ChatSessionLog)
+                .where(ChatSessionLog.session_id == ch.session_id)
+                .values(date_and_time=datetime.now(timezone.utc))
+            )
+
         await session.commit()
 
 async def get_interlocutor_id(tg_id):
@@ -69,25 +90,60 @@ async def delete_from_queue(tg_id):
         )
         await session.commit()
 
+
 async def get_random_record(tg_id):
     async with async_session() as session:
-        count = await session.execute(
-            select(func.count()).select_from(Queue)
-        )
-        
-        count = count.scalar()
-        if count > 1:
-            random_record = await session.scalar(
-                select(Queue).order_by(func.random()).limit(1)
-            )
+        time_threshold = datetime.now(timezone.utc) - timedelta(hours=24)
 
-            while random_record.user_tg_id == tg_id:
+        count_result = await session.execute(select(func.count()).select_from(Queue))
+        count = count_result.scalar()
+
+        counter = 0
+        if count > 1:
+            # curr_time = datetime.now().time()
+            while True:
+                counter += 1
+                # print("количество запросов ", counter)
+                if counter > 100:
+                    # print("end time:", datetime.now().time()-curr_time)
+                    return
+
                 random_record = await session.scalar(
                     select(Queue).order_by(func.random()).limit(1)
                 )
 
-            await delete_from_queue(random_record.user_tg_id)
-            await delete_from_queue(tg_id)
+                ch = await session.scalar(
+                    select(ChatSessionLog).where(or_(
+                        (ChatSessionLog.user_tg_id_1 == random_record.user_tg_id) &
+                        (ChatSessionLog.user_tg_id_2 == tg_id),
+                        (ChatSessionLog.user_tg_id_2 == random_record.user_tg_id) &
+                        (ChatSessionLog.user_tg_id_1 == tg_id)
+                    ))
+                )
+
+                if random_record.user_tg_id == tg_id:
+                    continue
+                else:
+                    if ch:
+                        if ch.date_and_time < time_threshold:
+                            await session.execute(
+                                update(ChatSessionLog)
+                                .where(ChatSessionLog.session_id == ch.session_id)
+                                .values(date_and_time=datetime.now(timezone.utc))
+                            )
+                            break
+                        else:
+                            continue
+                    break
+
+            await session.execute(
+                delete(Queue).where(Queue.user_tg_id == random_record.user_tg_id)
+            )
+            await session.execute(
+                delete(Queue).where(Queue.user_tg_id == tg_id)
+            )
+            await session.commit()
+
             return random_record
         return False
 
@@ -123,6 +179,14 @@ async def get_people_online():
         total_counter += queue_counter.scalar()
         total_counter += 2*session_counter.scalar()
 
-        print(total_counter)
 
         return total_counter
+
+async def delete_old_rows():
+    async with async_session() as session:
+        now = datetime.now()
+        time_threshold = now - timedelta(hours=24)
+        await session.execute(
+            delete(ChatSessionLog).where(ChatSessionLog.date_and_time < time_threshold)
+        )
+        await session.commit()

@@ -1,6 +1,9 @@
-from sqlalchemy import BigInteger, ForeignKey, JSON
+import datetime
+
+from sqlalchemy import BigInteger, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
+from sqlalchemy.sql import func
 
 from src.config_reader import config
 
@@ -23,6 +26,14 @@ class ChatSession(Base):
     session_id: Mapped[int] = mapped_column(primary_key=True)
     user_tg_id_1 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
     user_tg_id_2 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
+
+class ChatSessionLog(Base):
+    __tablename__ = "chatsessionlogs"
+
+    session_id: Mapped[int] = mapped_column(primary_key=True)
+    user_tg_id_1 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
+    user_tg_id_2 = mapped_column(BigInteger, ForeignKey('users.user_tg_id'))
+    date_and_time = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 class Queue(Base):
     __tablename__ = "queue"

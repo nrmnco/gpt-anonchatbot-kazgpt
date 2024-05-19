@@ -34,8 +34,8 @@ async def search_interlocutor(message: Message, state: FSMContext) -> None:
 async def stop_chatting(message: Message):
     interlocutor = await get_interlocutor_id(message.from_user.id)
     await message.answer(text="❌ Диалог закончен", reply_markup=main_kb)
-    await message.bot.send_message(chat_id=interlocutor, text="❌ Диалог закончен", reply_markup=main_kb)
     await delete_session(message.from_user.id)
+    await message.bot.send_message(chat_id=interlocutor, text="❌ Диалог закончен", reply_markup=main_kb)
     await dp.fsm.get_context(message.bot, user_id=interlocutor, chat_id=interlocutor).clear()
     await dp.fsm.get_context(message.bot, user_id=message.from_user.id, chat_id=message.from_user.id).clear()
 
