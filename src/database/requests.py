@@ -43,7 +43,7 @@ async def add_session(tg_id_1, tg_id_2) -> None:
         )
 
         if not ch:
-            session.add(ChatSessionLog(user_tg_id_1 = tg_id_1, user_tg_id_2 = tg_id_2,date_and_time=datetime.now(timezone.utc) - timedelta(hours=24)))
+            session.add(ChatSessionLog(user_tg_id_1 = tg_id_1, user_tg_id_2 = tg_id_2,date_and_time=datetime.now(timezone.utc)))
         else:
             await session.execute(
                 update(ChatSessionLog)
@@ -95,57 +95,50 @@ async def get_random_record(tg_id):
     async with async_session() as session:
         time_threshold = datetime.now(timezone.utc) - timedelta(hours=24)
 
-        count_result = await session.execute(select(func.count()).select_from(Queue))
-        count = count_result.scalar()
+        result = await session.execute(select(Queue))
+        records = result.scalars().all()
 
-        counter = 0
-        if count > 1:
-            # curr_time = datetime.now().time()
-            while True:
-                counter += 1
-                # print("количество запросов ", counter)
-                if counter > 100:
-                    # print("end time:", datetime.now().time()-curr_time)
-                    return
-
-                random_record = await session.scalar(
-                    select(Queue).order_by(func.random()).limit(1)
-                )
-
-                ch = await session.scalar(
-                    select(ChatSessionLog).where(or_(
-                        (ChatSessionLog.user_tg_id_1 == random_record.user_tg_id) &
-                        (ChatSessionLog.user_tg_id_2 == tg_id),
-                        (ChatSessionLog.user_tg_id_2 == random_record.user_tg_id) &
-                        (ChatSessionLog.user_tg_id_1 == tg_id)
-                    ))
-                )
-
-                if random_record.user_tg_id == tg_id:
-                    continue
-                else:
-                    if ch:
-                        if ch.date_and_time < time_threshold:
-                            await session.execute(
-                                update(ChatSessionLog)
-                                .where(ChatSessionLog.session_id == ch.session_id)
-                                .values(date_and_time=datetime.now(timezone.utc))
-                            )
-                            break
-                        else:
-                            continue
-                    break
-
-            await session.execute(
-                delete(Queue).where(Queue.user_tg_id == random_record.user_tg_id)
+        for record in records:
+            ch = await session.scalar(
+                select(ChatSessionLog).where(or_(
+                    (ChatSessionLog.user_tg_id_1 == record.user_tg_id) &
+                    (ChatSessionLog.user_tg_id_2 == tg_id),
+                    (ChatSessionLog.user_tg_id_2 == record.user_tg_id) &
+                    (ChatSessionLog.user_tg_id_1 == tg_id)
+                ))
             )
-            await session.execute(
-                delete(Queue).where(Queue.user_tg_id == tg_id)
-            )
-            await session.commit()
 
-            return random_record
-        return False
+            if record.user_tg_id == tg_id:
+                continue
+            else:
+                if ch:
+                    if ch.date_and_time < time_threshold:
+                        await session.execute(
+                            update(ChatSessionLog)
+                            .where(ChatSessionLog.session_id == ch.session_id)
+                            .values(date_and_time=datetime.now(timezone.utc))
+                        )
+                        await session.execute(
+                            delete(Queue).where(Queue.user_tg_id == record.user_tg_id)
+                        )
+                        await session.execute(
+                            delete(Queue).where(Queue.user_tg_id == tg_id)
+                        )
+                        await session.commit()
+                        return record
+
+                    else:
+                        continue
+                await session.execute(
+                    delete(Queue).where(Queue.user_tg_id == record.user_tg_id)
+                )
+                await session.execute(
+                    delete(Queue).where(Queue.user_tg_id == tg_id)
+                )
+                await session.commit()
+                return record
+
+        return None
 
 async def get_friends(tg_id):
     async with async_session() as session:
