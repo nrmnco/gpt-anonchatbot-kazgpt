@@ -36,8 +36,8 @@ async def stop_chatting(message: Message):
     await message.answer(text="❌ Диалог закончен", reply_markup=main_kb)
     await delete_session(message.from_user.id)
     await message.bot.send_message(chat_id=interlocutor, text="❌ Диалог закончен", reply_markup=main_kb)
-    await dp.fsm.get_context(message.bot, user_id=interlocutor, chat_id=interlocutor).clear()
-    await dp.fsm.get_context(message.bot, user_id=message.from_user.id, chat_id=message.from_user.id).clear()
+    # await dp.fsm.get_context(message.bot, user_id=interlocutor, chat_id=interlocutor).clear()
+    # await dp.fsm.get_context(message.bot, user_id=message.from_user.id, chat_id=message.from_user.id).clear()
 
 @router.message(or_f(Command("next"), F.text == "🔎 Следующий чат"))
 async def next_chatting(message: Message, state: FSMContext):
@@ -65,6 +65,7 @@ async def next_chatting(message: Message, state: FSMContext):
 async def write_users_online(message: Message):
     users_num = await get_people_online()
     await message.answer(f"На данный момент онлайн находятся {users_num} пользователей(я)")
+
 
 
 

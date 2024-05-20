@@ -11,3 +11,4 @@ class MainState(StatesGroup):
     profile = State()
     permission_to_connect = State()
     connect_to_friend = State()
+    delete_friend = State()

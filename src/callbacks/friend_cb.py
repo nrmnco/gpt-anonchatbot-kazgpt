@@ -5,9 +5,9 @@ from aiogram.fsm.context import FSMContext
 
 from src import dp
 from src.database.requests import get_interlocutor_id, get_friends, is_in_session, add_to_queue, get_random_record, \
-    get_bio, add_session
+    get_bio, add_session, delete_friend
 from src.handlers.chat_commands import stop_chatting
-from src.keyboards.reply import permission_kb, search_kb
+from src.keyboards.reply import permission_kb
 from src.states import MainState
 
 router = Router()
@@ -17,9 +17,9 @@ async def accept_friend(cb: CallbackQuery, state:FSMContext):
     await cb.answer('')
     interlocutor = await get_interlocutor_id(cb.from_user.id)
     await cb.message.answer("Придумайте ему никнейм")
+    await state.set_state(MainState.nickname)
     await cb.message.bot.send_message(chat_id=interlocutor,
                                    text="Придумайте ему никнейм")
-    await state.set_state(MainState.nickname)
     await dp.fsm.get_context(cb.message.bot, user_id=interlocutor, chat_id=interlocutor).set_state(MainState.nickname)
 
 @router.callback_query(F.data == "decline")
@@ -35,12 +35,22 @@ async def permission_to_connect(cb: CallbackQuery, state: FSMContext):
     await cb.answer('')
     data = await state.get_data()
     interlocutor_id = int(cb.data)
-    friends = await get_friends(interlocutor_id)
+    friends = (await get_friends(interlocutor_id)).friends
     nickname = friends[str(data["id"])]
     await cb.message.bot.send_message(chat_id=interlocutor_id,text=f"{nickname} хочет общаться с вами", reply_markup=permission_kb)
     await state.clear()
     await dp.fsm.get_context(cb.message.bot, user_id=interlocutor_id, chat_id=interlocutor_id).storage.set_data(key=StorageKey(bot_id=cb.bot.id, chat_id=interlocutor_id, user_id=interlocutor_id), data=data)
 
+@router.callback_query(MainState.delete_friend)
+async def delete_friend_cb(cb: CallbackQuery, state: FSMContext):
+    await cb.answer('')
+    await cb.message.answer("Друг удален")
+    friend_id = int(cb.data)
+    friend = (await get_friends(friend_id)).friends[str(cb.from_user.id)]
+    await delete_friend(cb.from_user.id, friend_id)
+    await delete_friend(friend_id, cb.from_user.id)
+    await cb.bot.send_message(friend_id, f"{friend} удалил вас из друзей")
+    await state.clear()
 
 @router.callback_query(F.data == "perm_accept")
 async def create_friend_session(cb: CallbackQuery, state: FSMContext):

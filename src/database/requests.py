@@ -41,15 +41,15 @@ async def add_session(tg_id_1, tg_id_2) -> None:
                 or_(ChatSessionLog.user_tg_id_1 == tg_id_2 and ChatSessionLog.user_tg_id_2 == tg_id_1,
                     ChatSessionLog.user_tg_id_2 == tg_id_2 and ChatSessionLog.user_tg_id_1 == tg_id_1))
         )
-
-        if not ch:
-            session.add(ChatSessionLog(user_tg_id_1 = tg_id_1, user_tg_id_2 = tg_id_2,date_and_time=datetime.now(timezone.utc)))
-        else:
+        if ch:
             await session.execute(
                 update(ChatSessionLog)
                 .where(ChatSessionLog.session_id == ch.session_id)
                 .values(date_and_time=datetime.now(timezone.utc))
             )
+        else:
+            session.add(
+                ChatSessionLog(user_tg_id_1=tg_id_1, user_tg_id_2=tg_id_2, date_and_time=datetime.now(timezone.utc)))
 
         await session.commit()
 
@@ -144,12 +144,13 @@ async def get_friends(tg_id):
     async with async_session() as session:
         friends = await session.scalar(select(Friend).where(Friend.user_tg_id == tg_id))
         if friends:
-            return friends.friends
+            return friends
 
 async def add_friend(tg_id, interlocutor_tg_id, nickname):
     async with async_session() as session:
-        friends = await get_friends(tg_id)
-        if friends:
+        friend_object = await get_friends(tg_id)
+        if friend_object:
+            friends = friend_object.friends
             friends[interlocutor_tg_id] = nickname
             await session.execute(update(Friend).where(Friend.user_tg_id == tg_id).values(friends=friends))
             await session.commit()
@@ -157,6 +158,15 @@ async def add_friend(tg_id, interlocutor_tg_id, nickname):
             friends = {interlocutor_tg_id: nickname}
             session.add(Friend(user_tg_id=tg_id, friends=friends))
             await session.commit()
+
+
+async def delete_friend(tg_id, interlocutor_tg_id):
+    async with async_session() as session:
+        friends = (await get_friends(tg_id)).friends
+        friends.pop(str(interlocutor_tg_id))
+        await session.execute(update(Friend).where(Friend.user_tg_id == tg_id).values(friends=friends))
+        await session.commit()
+
 
 async def get_people_online():
     async with async_session() as session:

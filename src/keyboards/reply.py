@@ -10,9 +10,6 @@ main_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="🍪 Профиль")
         ],
-        [
-            KeyboardButton(text="👩🏿‍🤝‍👩🏿 Написать другу")
-        ]
     ],
     resize_keyboard=True
 )

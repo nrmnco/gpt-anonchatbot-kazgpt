@@ -3,6 +3,7 @@ from aiogram.types import Message, BotCommand
 from aiogram.filters import CommandStart, Command, or_f
 from aiogram.fsm.context import FSMContext
 
+from src import bot
 from src.middlewares.check_subscription import CheckSubscription
 from src.states import MainState
 from src.keyboards.reply import main_kb, reg_kb
