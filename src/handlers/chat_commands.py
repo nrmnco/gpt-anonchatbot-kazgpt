@@ -17,7 +17,7 @@ async def search_interlocutor(message: Message, state: FSMContext) -> None:
         await message.answer("У тебя уже есть собеседник!!")
     else:
         users_num = await get_people_online()
-        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я)", reply_markup=search_kb)
+        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я). Если бот не найдет Вам собеседника в течении 24 часов, то рекуомендуем нажать на кнопку еще раз.", reply_markup=search_kb)
         await add_to_queue(message.from_user.id)
         interlocutor = await get_random_record(message.from_user.id)
         if interlocutor:
@@ -49,7 +49,7 @@ async def next_chatting(message: Message, state: FSMContext):
         await message.answer("У тебя уже есть собеседник!!")
     else:
         users_num = await get_people_online()
-        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я)", reply_markup=search_kb)
+        await message.answer(f"Ищем собеседника . . .\nНа данный момент онлайн находятся {users_num} пользователей(я). Если бот не найдет Вам собеседника в течении 24 часов, то рекуомендуем нажать на кнопку еще раз.", reply_markup=search_kb)
         await add_to_queue(message.from_user.id)
         interlocutor = await get_random_record(message.from_user.id)
         if interlocutor:
@@ -64,7 +64,7 @@ async def next_chatting(message: Message, state: FSMContext):
 @router.message(Command("users_online"))
 async def write_users_online(message: Message):
     users_num = await get_people_online()
-    await message.answer(f"На данный момент онлайн находятся {users_num} пользователей(я)")
+    await message.answer(f"На данный момент онлайн находятся {users_num} пользователей(я). Они либо в поиске либо уже общаяются между собой.")
 
 
 

@@ -13,18 +13,19 @@ router = Router()
 @router.message(Command("add_friend"))
 async def manage_friends(message: Message):
     friends_object = await get_friends(message.from_user.id)
+    await message.answer("Заявка на добавление в друзья отправлена пользователю. Ждемс . . .")
     if friends_object:
         if len(friends_object.friends) <= 5:
             interlocutor = await get_interlocutor_id(message.from_user.id)
             await message.bot.send_message(chat_id=interlocutor,
-                                           text="Вас хотят добавить в друзья",
+                                           text="Пользователь хочет добавить Вас в друзья",
                                            reply_markup=add_friend_kb)
         else:
-            await message.answer("Достигнут лимит друзей (5 пользователей). Чтобы добавить данного пользователя сначала удалите одного из имеющихся контактов через /delete")
+            await message.answer("Достигнут лимит друзей (5 пользователей). Чтобы добавить данного пользователя сначала удалите одного из имеющихся контактов через /delete_friend")
     else:
         interlocutor = await get_interlocutor_id(message.from_user.id)
         await message.bot.send_message(chat_id=interlocutor,
-                                       text="Вас хотят добавить в друзья",
+                                       text="Пользователь хочет добавить Вас в друзья",
                                        reply_markup=add_friend_kb)
 
 @router.message(MainState.nickname)

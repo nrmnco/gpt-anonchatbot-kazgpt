@@ -5,12 +5,12 @@ import logging
 
 from aiogram.types import BotCommand
 
-from handlers import setup_message_routers
-from callbacks import setup_callbacks_routers
+from src.handlers import setup_message_routers
+from src.callbacks import setup_callbacks_routers
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from database.models import async_main
-from database.requests import delete_old_rows
+from src.database.models import async_main
+from src.database.requests import delete_old_rows
 
 from src import dp, bot
 

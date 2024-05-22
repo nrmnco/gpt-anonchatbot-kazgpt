@@ -1,7 +1,25 @@
 FROM python:latest
+
+# Configure timezone environment variable
 ENV TZ=UTC
-COPY . .
+
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Add Poetry to PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# Set working directory
 WORKDIR .
-RUN pip3 install -r requirements.txt
+
+# Copy project files to the Docker image
+COPY . .
+
+# Install dependencies with Poetry
+RUN poetry install
+
+# Expose port 80
 EXPOSE 80
-CMD ["python", "./__main__.py"]
+
+# Run the application using Poetry
+CMD ["poetry", "run", "python", "-m", "src.__main__"]

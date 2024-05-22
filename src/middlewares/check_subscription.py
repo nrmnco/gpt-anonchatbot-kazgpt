@@ -16,7 +16,7 @@ class CheckSubscription(BaseMiddleware):
     ) -> Any:
         statuses = ["creator", "administrator", "member"]
         try:
-            result = await bot.get_chat_member(chat_id="@testtestchanngel", user_id=event.from_user.id)
+            result = await bot.get_chat_member(chat_id="@nukazgpt", user_id=event.from_user.id)
             print(result.status.value)
             if result.status.value in statuses:
                 return await handler(event, data)
